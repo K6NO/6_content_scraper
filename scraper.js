@@ -1,9 +1,9 @@
-// npm install and npm start from command line
+// npm install & start from CLI
 
 // Dependencies:
 //  scraper: x-ray - https://www.npmjs.com/package/x-ray
 //  csv parser: json2csv - https://www.npmjs.com/package/json2csv
-//  prettify date: moment - https://www.npmjs.com/package/moment
+//  date handling: moment - https://www.npmjs.com/package/moment
 
 const fs = require('fs');
 const Xray = require('x-ray');
@@ -25,7 +25,9 @@ if (!fs.existsSync('./data/')){
     })
 }
 
-//The scraper gets the price, title, url and image url from the product page and save this information into a CSV file.
+// The scraper gets the price, title, url and image url from the product page.
+// The callback appends the date and saves this information into a CSV file.
+// Error messages are logged in scraper-error.log, the most common error messages are logged with user-friendly text.
 
 x(url, '.products li',  [{
     title : x('a@href', 'title'),
@@ -40,8 +42,10 @@ x(url, '.products li',  [{
             console.log(errorLog);
             fs.appendFileSync('scraper-error.log', errorLog + '\n');
             if (error.errno === 'ENOTFOUND') {
-                prettyError = '404';
-                console.log(`There\'s been a ${prettyError} error. Cannot connect to ${url}`);
+                let prettyError = '404';
+                console.log(`There\'s been a 404 error. Cannot connect to ${url}`);
+            } else if (error.errno === 'ETIMEDOUT'){
+                console.log(`There\'s been a timeout error. Cannot connect to ${url}`);
             } else {
                 console.log(`There\'s been a ${error.errno} error. Cannot connect to ${url}`);
             }
@@ -49,16 +53,14 @@ x(url, '.products li',  [{
         else {
             // append time
             let now = moment().format('YYYY-MM-DD');
-            console.log(typeof now)
             for (key in object){
                 object[key].time = now;
             }
-            console.log(object);
 
             // save csv
             let fields = ['title', 'price', 'imgUrl', 'url', 'time'];
             let csv = parser({ data: object, fields: fields});
             console.log(csv);
-            fs.writeFileSync('./data/file.csv', csv);
+            fs.writeFileSync(`./data/${now}.csv`, csv);
         }
-    })
+    });
